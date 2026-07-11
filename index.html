@@ -585,9 +585,13 @@
 <div class="overlay" id="overlay">
   <div class="modal" id="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="modalTitle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-title" id="modalTitle" style="margin-bottom:0;"></div>
+      <button onclick="closeModal()" style="background:var(--card);border:1px solid var(--border);color:var(--muted);width:32px;height:32px;border-radius:8px;font-size:18px;cursor:pointer;line-height:1;flex-shrink:0;">✕</button>
+    </div>
     <div class="modal-date" id="modalDate"></div>
-    <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">👮 Serviço</div>
+
+    <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">👮 Serviço PM</div>
     <div class="tipo-grid" style="margin-bottom:12px;">
       <button class="tipo-btn" data-tipo="pm" onclick="selectTipo('pm')">
         <span class="icon">🛡️</span>Serviço PM
@@ -599,26 +603,11 @@
         <span class="icon">🚔</span>Delegada
       </button>
       <button class="tipo-btn" data-tipo="folga_esp" onclick="selectTipo('folga_esp')">
-        <span class="icon">⭐</span>Folga Esp.
+        <span class="icon">🌴</span>Folga Esp.
       </button>
     </div>
+
     <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📅 Compromissos</div>
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚙️ Serviço</div>
-    <div class="tipo-grid" style="margin-bottom:10px;">
-      <button class="tipo-btn" data-tipo="pm" onclick="selectTipo('pm')">
-        <span class="icon">🛡️</span>Serviço PM
-      </button>
-      <button class="tipo-btn" data-tipo="dejem" onclick="selectTipo('dejem')">
-        <span class="icon">🏥</span>DEJEM
-      </button>
-      <button class="tipo-btn" data-tipo="deleg" onclick="selectTipo('deleg')">
-        <span class="icon">🚔</span>Delegada
-      </button>
-      <button class="tipo-btn" data-tipo="folga_esp" onclick="selectTipo('folga_esp')">
-        <span class="icon">⭐</span>Folga Esp.
-      </button>
-    </div>
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📅 Compromissos</div>
     <div class="tipo-grid" style="margin-bottom:10px;">
       <button class="tipo-btn" data-tipo="medico" onclick="selectTipo('medico')">
         <span class="icon">🏥</span>Médico
@@ -633,30 +622,33 @@
         <span class="icon">🎉</span>Evento
       </button>
     </div>
-    <!-- Campos extras para DEJEM/Delegada -->
+
     <div class="extra-fields" id="extraFields">
       <div class="extra-row">
         <div class="extra-group">
           <div class="extra-label">⏰ Horário</div>
-          <input type="time" class="extra-input" id="horarioField" placeholder="00:00">
+          <input type="time" class="extra-input" id="horarioField">
         </div>
         <div class="extra-group">
           <div class="extra-label">🕐 Término</div>
-          <input type="time" class="extra-input" id="terminoField" placeholder="00:00">
+          <input type="time" class="extra-input" id="terminoField">
         </div>
       </div>
       <div>
         <div class="extra-label">📍 Local</div>
-        <input type="text" class="extra-input" id="localField" placeholder="Ex: UPA Centro, 1ª Delegacia...">
+        <input type="text" class="extra-input" id="localField" placeholder="Local...">
       </div>
     </div>
+
     <textarea class="obs-field" id="obsField" rows="2" placeholder="Observação (opcional)..."></textarea>
+
     <div class="modal-actions">
       <button class="btn-save" onclick="saveDay()">Salvar</button>
-      <button class="btn-clear" onclick="clearDay()">🗑️</button>
+      <button class="btn-clear" onclick="clearDay()" title="Limpar dia">🗑️</button>
+      <button class="btn-clear" onclick="closeModal()" title="Cancelar">✕</button>
     </div>
   </div>
-</div>
+</div>iv>
 
 <div class="toast" id="toast"></div>
 
