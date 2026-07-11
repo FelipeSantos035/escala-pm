@@ -338,6 +338,10 @@
     .tipo-btn.selected-deleg { border-color: var(--deleg); background: var(--deleg-glow); }
     .tipo-btn.selected-folga { border-color: var(--folga); background: var(--folga-glow); }
     .tipo-btn.selected-folga_esp { border-color: var(--folga); background: var(--folga-glow); }
+    .tipo-btn.selected-medico   { border-color: #e05555; background: #1a0f0f; }
+    .tipo-btn.selected-casa     { border-color: #e0a020; background: #1a140a; }
+    .tipo-btn.selected-trabalho { border-color: #20c0e0; background: #0f1a2a; }
+    .tipo-btn.selected-evento   { border-color: #c084fc; background: #1a0f1a; }
 
     .obs-field {
       width: 100%;
@@ -432,6 +436,42 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+
+    /* Médico */
+    .day.tipo-medico {
+      background: #1a0f0f;
+      border-color: #e05555;
+      border-width: 2px;
+    }
+    .day.tipo-medico .day-num { color: #fff; }
+    .day.tipo-medico .day-label { color: #e05555; font-weight: 800; font-size: 9px; }
+
+    /* Casa */
+    .day.tipo-casa {
+      background: #1a140a;
+      border-color: #e0a020;
+      border-width: 2px;
+    }
+    .day.tipo-casa .day-num { color: #fff; }
+    .day.tipo-casa .day-label { color: #e0a020; font-weight: 800; font-size: 9px; }
+
+    /* Trabalho Joyce */
+    .day.tipo-trabalho {
+      background: #0f1a2a;
+      border-color: #20c0e0;
+      border-width: 2px;
+    }
+    .day.tipo-trabalho .day-num { color: #fff; }
+    .day.tipo-trabalho .day-label { color: #20c0e0; font-weight: 800; font-size: 9px; }
+
+    /* Evento */
+    .day.tipo-evento {
+      background: #1a0f1a;
+      border-color: #c084fc;
+      border-width: 2px;
+    }
+    .day.tipo-evento .day-num { color: #fff; }
+    .day.tipo-evento .day-label { color: #c084fc; font-weight: 800; font-size: 9px; }
 
     /* OBS indicator */
     .obs-dot {
@@ -547,7 +587,24 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="modalTitle"></div>
     <div class="modal-date" id="modalDate"></div>
-    <div class="tipo-grid">
+    <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">👮 Serviço</div>
+    <div class="tipo-grid" style="margin-bottom:12px;">
+      <button class="tipo-btn" data-tipo="pm" onclick="selectTipo('pm')">
+        <span class="icon">🛡️</span>Serviço PM
+      </button>
+      <button class="tipo-btn" data-tipo="dejem" onclick="selectTipo('dejem')">
+        <span class="icon">🚑</span>DEJEM
+      </button>
+      <button class="tipo-btn" data-tipo="deleg" onclick="selectTipo('deleg')">
+        <span class="icon">🚔</span>Delegada
+      </button>
+      <button class="tipo-btn" data-tipo="folga_esp" onclick="selectTipo('folga_esp')">
+        <span class="icon">⭐</span>Folga Esp.
+      </button>
+    </div>
+    <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📅 Compromissos</div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚙️ Serviço</div>
+    <div class="tipo-grid" style="margin-bottom:10px;">
       <button class="tipo-btn" data-tipo="pm" onclick="selectTipo('pm')">
         <span class="icon">🛡️</span>Serviço PM
       </button>
@@ -559,6 +616,21 @@
       </button>
       <button class="tipo-btn" data-tipo="folga_esp" onclick="selectTipo('folga_esp')">
         <span class="icon">⭐</span>Folga Esp.
+      </button>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">📅 Compromissos</div>
+    <div class="tipo-grid" style="margin-bottom:10px;">
+      <button class="tipo-btn" data-tipo="medico" onclick="selectTipo('medico')">
+        <span class="icon">🏥</span>Médico
+      </button>
+      <button class="tipo-btn" data-tipo="trabalho" onclick="selectTipo('trabalho')">
+        <span class="icon">💼</span>Trabalho
+      </button>
+      <button class="tipo-btn" data-tipo="casa" onclick="selectTipo('casa')">
+        <span class="icon">🏠</span>Casa
+      </button>
+      <button class="tipo-btn" data-tipo="evento" onclick="selectTipo('evento')">
+        <span class="icon">🎉</span>Evento
       </button>
     </div>
     <!-- Campos extras para DEJEM/Delegada -->
@@ -595,11 +667,15 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
 const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const TIPOS = {
-  pm:        { label: 'PM',    cls: 'tipo-pm'         },
-  dejem:      { label: 'DEJEM',  cls: 'tipo-dejem'       },
-  deleg:     { label: 'DEL',   cls: 'tipo-deleg'      },
-  folga:     { label: 'FOLGA', cls: 'tipo-folga-auto' },
-  folga_esp: { label: 'ESP',   cls: 'tipo-folga'      },
+  pm:        { label: 'PM',      cls: 'tipo-pm'         },
+  dejem:     { label: 'DEJEM',   cls: 'tipo-dejem'      },
+  deleg:     { label: 'DEL',     cls: 'tipo-deleg'      },
+  folga:     { label: 'FOLGA',   cls: 'tipo-folga-auto' },
+  folga_esp: { label: 'ESP',     cls: 'tipo-folga'      },
+  medico:    { label: 'MED',     cls: 'tipo-medico'     },
+  casa:      { label: 'CASA',    cls: 'tipo-casa'       },
+  trabalho:  { label: 'TRAB',    cls: 'tipo-trabalho'   },
+  evento:    { label: 'EVT',     cls: 'tipo-evento'     },
 };
 
 let currentYear, currentMonth;
@@ -720,7 +796,7 @@ function renderCalendar() {
     grid.appendChild(el);
   }
 
-  const counts = { pm: 0, dejem: 0, deleg: 0, folga: 0 };
+  const counts = { pm: 0, dejem: 0, deleg: 0, medico: 0, trabalho: 0, casa: 0, evento: 0, folga_esp: 0 };
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
@@ -765,10 +841,14 @@ function renderStats(counts) {
   const bar = document.getElementById('statsBar');
   bar.innerHTML = '';
   const items = [
-    { tipo: 'pm',    label: 'PM',       color: 'var(--pm)'    },
-    { tipo: 'dejem',  label: 'DEJEM',     color: 'var(--dejem)'  },
-    { tipo: 'deleg', label: 'Delegada', color: 'var(--deleg)' },
-    { tipo: 'folga', label: 'F.Esp',    color: 'var(--folga)' },
+    { tipo: 'pm',       label: 'PM',       color: 'var(--pm)'    },
+    { tipo: 'dejem',    label: 'DEJEM',    color: 'var(--dejem)' },
+    { tipo: 'deleg',    label: 'Delegada', color: 'var(--deleg)' },
+    { tipo: 'folga_esp',label: 'F.Esp',    color: 'var(--folga)' },
+    { tipo: 'medico',   label: 'Médico',   color: '#e05555'      },
+    { tipo: 'trabalho', label: 'Trab.',    color: '#20c0e0'      },
+    { tipo: 'casa',     label: 'Casa',     color: '#e0a020'      },
+    { tipo: 'evento',   label: 'Evento',   color: '#c084fc'      },
   ];
   items.forEach(({ tipo, label, color }) => {
     const pill = document.createElement('div');
@@ -804,9 +884,9 @@ function openModal(d) {
   selectedTipo = entry.tipo || null;
   updateTipoBtns();
 
-  // Mostrar campos extras se for DEJEM ou Delegada
+  // Mostrar campos extras se necessário
   const extra = document.getElementById('extraFields');
-  if (selectedTipo === 'dejem' || selectedTipo === 'deleg') {
+  if (selectedTipo && TIPOS_COM_EXTRA.includes(selectedTipo)) {
     extra.classList.add('visible');
   } else {
     extra.classList.remove('visible');
@@ -821,13 +901,22 @@ function closeModal() {
   selectedTipo = null;
 }
 
+const TIPOS_COM_EXTRA = ['dejem','deleg','medico','trabalho','evento'];
 function selectTipo(tipo) {
   selectedTipo = selectedTipo === tipo ? null : tipo;
   updateTipoBtns();
-  // Mostrar campos extras só para DEJEM e Delegada
   const extra = document.getElementById('extraFields');
-  if (selectedTipo === 'dejem' || selectedTipo === 'deleg') {
+  if (selectedTipo && TIPOS_COM_EXTRA.includes(selectedTipo)) {
     extra.classList.add('visible');
+    const localInput = document.getElementById('localField');
+    const placeholders = {
+      dejem:    'Ex: UPA Centro, Hospital...',
+      deleg:    'Ex: 1ª Delegacia, DP Centro...',
+      medico:   'Ex: UPA, Clínica, Hospital...',
+      trabalho: 'Ex: Empresa, endereço...',
+      evento:   'Ex: Nome do local, endereço...',
+    };
+    if (localInput && placeholders[selectedTipo]) localInput.placeholder = placeholders[selectedTipo];
   } else {
     extra.classList.remove('visible');
   }
@@ -848,7 +937,7 @@ function saveDay() {
   const termino = document.getElementById('terminoField').value.trim();
   const local   = document.getElementById('localField').value.trim();
 
-  const isExtra = selectedTipo === 'dejem' || selectedTipo === 'deleg';
+  const isExtra = selectedTipo && TIPOS_COM_EXTRA.includes(selectedTipo);
   const extras  = isExtra ? {
     ...(horario ? { horario } : {}),
     ...(termino ? { termino } : {}),
