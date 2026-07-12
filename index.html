@@ -749,8 +749,8 @@ function showSyncStatus(msg, success) {
   const el = document.getElementById('syncStatus');
   if (!el) return;
   el.textContent = msg;
-  el.style.color = success ? 'var(--folga)' : 'var(--muted)';
-  if (success) setTimeout(hideSyncStatus, 2000);
+  el.style.color = success ? '#1ead6e' : 'var(--muted)';
+  if (success) setTimeout(hideSyncStatus, 2500);
 }
 function hideSyncStatus() {
   const el = document.getElementById('syncStatus');
@@ -985,6 +985,84 @@ document.getElementById('nextMonth').addEventListener('click', () => {
   renderCalendar();
 });
 
+// Sync ao voltar para o app (minimizou e voltou)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') syncFromRemote();
+});
+
+// Sync ao recuperar conexão
+window.addEventListener('online', () => syncFromRemote());
+
+// REALTIME — recebe alterações na hora via WebSocket
+function startRealtime() {
+  const wsUrl = SUPABASE_URL.replace('https://', 'wss://') + '/realtime/v1/websocket?apikey=' + SUPABASE_KEY + '&vsn=1.0.0';
+  let ws;
+  let heartbeat;
+  let ref = 1;
+
+  function connect() {
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      // Entrar no canal da tabela escala_dias
+      ws.send(JSON.stringify({
+        topic: 'realtime:public:escala_dias',
+        event: 'phx_join',
+        payload: { config: { broadcast: { self: false }, presence: { key: '' }, postgres_changes: [{ event: '*', schema: 'public', table: 'escala_dias', filter: `user_id=eq.${USER_ID}` }] } },
+        ref: String(ref++)
+      }));
+      // Heartbeat a cada 25s para manter conexão viva
+      heartbeat = setInterval(() => {
+        ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(ref++) }));
+      }, 25000);
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        // Quando chega uma alteração na tabela
+        if (msg.event === 'postgres_changes' || (msg.payload && msg.payload.data && msg.payload.data.type)) {
+          const change = msg.payload.data || msg.payload;
+          const record = change.record || change.new;
+          const old_record = change.old_record || change.old;
+          const eventType = change.type || change.eventType;
+
+          if (eventType === 'DELETE' && old_record) {
+            delete data[old_record.dia];
+          } else if (record && record.dia) {
+            const entry = {};
+            if (record.tipo)    entry.tipo    = record.tipo;
+            if (record.horario) entry.horario = record.horario;
+            if (record.termino) entry.termino = record.termino;
+            if (record.local)   entry.local   = record.local;
+            if (record.obs)     entry.obs     = record.obs;
+            if (record.auto)    entry.auto    = record.auto;
+            if (Object.keys(entry).length) data[record.dia] = entry;
+            else delete data[record.dia];
+          }
+          saveData();
+          renderCalendar();
+          showSyncStatus('✓ Atualizado', true);
+        }
+      } catch(err) {}
+    };
+
+    ws.onclose = () => {
+      clearInterval(heartbeat);
+      // Reconectar em 3 segundos se cair
+      setTimeout(connect, 3000);
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  connect();
+}
+
+function startAutoSync() {
+  startRealtime();
+}
+
 // Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -1015,6 +1093,7 @@ function iniciarApp() {
   seedInitialData();
   renderCalendar();
   syncFromRemote();
+  startAutoSync();
 }
 
 // Botão de trocar usuário
