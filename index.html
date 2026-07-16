@@ -484,6 +484,18 @@
       background: var(--today);
       border-radius: 50%;
     }
+    /* Férias */
+    .day.tipo-ferias {
+      background: linear-gradient(135deg, #1a3a1a, #0f2a0f);
+      border-color: #4caf50;
+      border-width: 2px;
+    }
+    .day.tipo-ferias .day-num { color: #fff; }
+    .day.tipo-ferias .day-label { color: #4caf50; font-weight: 800; }
+    .tipo-btn.selected-ferias { border-color: #4caf50; background: #0f2a0f; }
+    /* Multi eventos */
+    .day-labels { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .day-label-item { font-size: 7px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; line-height: 1; }
     /* Horário no card */
     .day-time {
       font-size: 8px;
@@ -576,7 +588,13 @@
     </div>
     <div class="modal-date" id="modalDate"></div>
 
-    <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">👮 Serviço PM</div>
+    <!-- Lista de eventos já no dia -->
+    <div id="eventosList" style="margin-bottom:8px;"></div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;">➕ Adicionar</div>
+      <button onclick="openFeriasModal()" style="background:#0f2a0f;border:1px solid #4caf50;color:#4caf50;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">🏖️ Férias por período</button>
+    </div>
     <div class="tipo-grid" style="margin-bottom:12px;">
       <button class="tipo-btn" data-tipo="pm" onclick="selectTipo('pm')">
         <span class="icon">🛡️</span>Serviço PM
@@ -590,8 +608,14 @@
       <button class="tipo-btn" data-tipo="folga_normal" onclick="selectTipo('folga_normal')">
         <span class="icon">😴</span>Folga
       </button>
+      <button class="tipo-btn" data-tipo="ferias" onclick="selectTipo('ferias')">
+        <span class="icon">🏖️</span>Férias
+      </button>
       <button class="tipo-btn" data-tipo="folga_esp" onclick="selectTipo('folga_esp')">
         <span class="icon">🌴</span>Folga Esp.
+      </button>
+      <button class="tipo-btn" data-tipo="ferias" onclick="selectTipo('ferias')">
+        <span class="icon">🏖️</span>Férias
       </button>
     </div>
 
@@ -631,7 +655,7 @@
     <textarea class="obs-field" id="obsField" rows="2" placeholder="Observação (opcional)..."></textarea>
 
     <div class="modal-actions">
-      <button class="btn-save" onclick="saveDay()">Salvar</button>
+      <button class="btn-save" onclick="saveDay()">+ Adicionar</button>
       <button class="btn-clear" onclick="clearDay()" title="Limpar dia">🗑️</button>
       <button class="btn-clear" onclick="closeModal()" title="Cancelar">✕</button>
     </div>
@@ -640,6 +664,33 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- MODAL FÉRIAS -->
+<div class="overlay" id="overlayFerias">
+  <div class="modal" id="modalFerias">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-title" style="margin-bottom:0;">🏖️ Férias por Período</div>
+      <button onclick="closeFeriasModal()" style="background:var(--card);border:1px solid var(--border);color:var(--muted);width:32px;height:32px;border-radius:8px;font-size:18px;cursor:pointer;">✕</button>
+    </div>
+    <div class="modal-date" style="margin-bottom:16px;">Selecione o período de férias</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div style="flex:1;">
+        <div class="extra-label">📅 Data Início</div>
+        <input type="date" class="extra-input" id="feriasInicio" style="width:100%;">
+      </div>
+      <div style="flex:1;">
+        <div class="extra-label">📅 Data Fim</div>
+        <input type="date" class="extra-input" id="feriasFim" style="width:100%;">
+      </div>
+    </div>
+    <div id="feriasSummary" style="font-size:12px;color:var(--muted);margin-bottom:14px;text-align:center;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-save" onclick="salvarFerias()" style="background:#1a5c30;">🏖️ Marcar Férias</button>
+      <button class="btn-clear" onclick="closeFeriasModal()">✕</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORAGE_KEY = 'escala_pm_v3';
 const SUPABASE_URL = 'https://yqakmyevpacxmpbsllil.supabase.co';
@@ -647,16 +698,17 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
 const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const TIPOS = {
-  pm:           { label: 'PM',    cls: 'tipo-pm'         },
-  dejem:        { label: 'DEJEM', cls: 'tipo-dejem'      },
-  deleg:        { label: 'DEL',   cls: 'tipo-deleg'      },
-  folga:        { label: 'FOLGA', cls: 'tipo-folga-auto' },
-  folga_normal: { label: 'FOLGA', cls: 'tipo-folga-auto' },
-  folga_esp:    { label: '🌴',    cls: 'tipo-folga'      },
-  medico:       { label: '🏥',    cls: 'tipo-medico'     },
-  trabalho:     { label: '💼',    cls: 'tipo-trabalho'   },
-  casa:         { label: '🏠',    cls: 'tipo-casa'       },
-  evento:       { label: '🎉',    cls: 'tipo-evento'     },
+  pm:           { label: 'PM',     cls: 'tipo-pm'         },
+  dejem:        { label: 'DEJEM',  cls: 'tipo-dejem'      },
+  deleg:        { label: 'DEL',    cls: 'tipo-deleg'      },
+  folga:        { label: 'FOLGA',  cls: 'tipo-folga-auto' },
+  folga_normal: { label: 'FOLGA',  cls: 'tipo-folga-auto' },
+  folga_esp:    { label: '🌴',     cls: 'tipo-folga'      },
+  ferias:       { label: 'FÉRIAS', cls: 'tipo-ferias'     },
+  medico:       { label: '🏥',     cls: 'tipo-medico'     },
+  trabalho:     { label: '💼',     cls: 'tipo-trabalho'   },
+  casa:         { label: '🏠',     cls: 'tipo-casa'       },
+  evento:       { label: '🎉',     cls: 'tipo-evento'     },
 };
 
 let currentYear, currentMonth;
@@ -683,6 +735,28 @@ const USER_ID = SHARED_ID;
 function loadData() {
   try { data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
   catch { data = {}; }
+  // Migrar formato antigo (tipo direto) para novo (eventos:[])
+  for (const key of Object.keys(data)) {
+    const e = data[key];
+    if (e && !e.eventos && e.tipo) {
+      data[key] = { eventos: [{ tipo: e.tipo, horario: e.horario, termino: e.termino, local: e.local, obs: e.obs }], auto: e.auto };
+    }
+  }
+}
+
+// Helper: pegar lista de eventos do dia
+function getDayEventos(key) {
+  const e = data[key];
+  if (!e) return [];
+  if (e.eventos) return e.eventos;
+  if (e.tipo) return [{ tipo: e.tipo, horario: e.horario, termino: e.termino, local: e.local, obs: e.obs }];
+  return [];
+}
+
+// Helper: tipo principal do dia (primeiro evento não-auto)
+function getDayTipoPrincipal(key) {
+  const evs = getDayEventos(key);
+  return evs.length > 0 ? evs[0].tipo : null;
 }
 
 function saveData() {
@@ -760,14 +834,13 @@ async function syncFromRemote() {
     const rows = await res.json();
     // Mesclar: remoto tem prioridade sobre local para dias não-auto
     rows.forEach(row => {
-      const entry = {};
-      if (row.tipo)    entry.tipo    = row.tipo;
-      if (row.horario) entry.horario = row.horario;
-      if (row.termino) entry.termino = row.termino;
-      if (row.local)   entry.local   = row.local;
-      if (row.obs)     entry.obs     = row.obs;
-      if (row.auto)    entry.auto    = row.auto;
-      if (Object.keys(entry).length) data[row.dia] = entry;
+      // Suporte a novo formato (eventos[]) e formato antigo (tipo direto)
+      if (row.tipo) {
+        // Formato antigo — converter
+        data[row.dia] = { eventos: [{ tipo: row.tipo, horario: row.horario, termino: row.termino, local: row.local, obs: row.obs }], auto: row.auto || false };
+      } else if (row.obs) {
+        data[row.dia] = { eventos: [], obs: row.obs, auto: false };
+      }
     });
     saveData();
     renderCalendar();
@@ -827,8 +900,6 @@ function renderCalendar() {
     const dow = date.getDay();
     const key = dayKey(currentYear, currentMonth, d);
     const entry = data[key];
-    if (entry) counts[entry.tipo] = (counts[entry.tipo] || 0) + 1;
-
     const el = document.createElement('div');
     let cls = 'day';
     if (dow === 0) cls += ' sunday';
@@ -840,19 +911,21 @@ function renderCalendar() {
     const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
     if (isPast && !isToday) cls += ' past';
 
-    if (entry && TIPOS[entry.tipo]) cls += ` ${TIPOS[entry.tipo].cls}`;
+    const eventos = getDayEventos(key);
+    const tipoPrincipal = eventos.length > 0 ? eventos[0].tipo : null;
+    if (tipoPrincipal && TIPOS[tipoPrincipal]) cls += ` ${TIPOS[tipoPrincipal].cls}`;
 
     el.className = cls;
     el.innerHTML = `<span class="day-num">${d}</span>`;
-    if (entry && TIPOS[entry.tipo]) {
-      el.innerHTML += `<span class="day-label">${TIPOS[entry.tipo].label}</span>`;
+    if (eventos.length > 0) {
+      el.innerHTML += `<div class="day-labels">${
+        eventos.map(ev => TIPOS[ev.tipo] ? `<span class="day-label-item" style="color:inherit;">${TIPOS[ev.tipo].label}</span>` : '').join('')
+      }</div>`;
+      const primEv = eventos[0];
+      if (primEv.horario) el.innerHTML += `<span class="day-time">${primEv.horario}</span>`;
+      if (eventos.some(ev => ev.obs || ev.local)) el.innerHTML += `<span class="obs-dot"></span>`;
     }
-    if (entry && entry.horario) {
-      el.innerHTML += `<span class="day-time">${entry.horario}</span>`;
-    }
-    if (entry && (entry.obs || entry.local)) {
-      el.innerHTML += `<span class="obs-dot"></span>`;
-    }
+    if (entry) counts[tipoPrincipal] = (counts[tipoPrincipal] || 0) + 1;
 
     el.addEventListener('click', () => openModal(d));
     grid.appendChild(el);
@@ -894,29 +967,95 @@ function renderStats(counts) {
 
 function openModal(d) {
   editingKey = dayKey(currentYear, currentMonth, d);
-  const entry = data[editingKey] || {};
   const date = new Date(currentYear, currentMonth, d);
   const dow = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][date.getDay()];
 
   document.getElementById('modalTitle').textContent = `${d} de ${MONTHS_PT[currentMonth]}`;
   document.getElementById('modalDate').textContent = dow;
-  document.getElementById('obsField').value = entry.obs || '';
-  document.getElementById('horarioField').value = entry.horario || '';
-  document.getElementById('terminoField').value = entry.termino || '';
-  document.getElementById('localField').value = entry.local || '';
 
-  selectedTipo = entry.tipo || null;
+  // Limpar campos
+  document.getElementById('obsField').value = '';
+  document.getElementById('horarioField').value = '';
+  document.getElementById('terminoField').value = '';
+  document.getElementById('localField').value = '';
+  selectedTipo = null;
+  editingEventoIdx = null;
+
+  // Mostrar eventos já cadastrados no dia
+  renderEventosList();
   updateTipoBtns();
-
-  // Mostrar campos extras se necessário
-  const extra = document.getElementById('extraFields');
-  if (selectedTipo && TIPOS_COM_EXTRA.includes(selectedTipo)) {
-    extra.classList.add('visible');
-  } else {
-    extra.classList.remove('visible');
-  }
-
+  document.getElementById('extraFields').classList.remove('visible');
   document.getElementById('overlay').classList.add('open');
+}
+
+let editingEventoIdx = null; // índice do evento sendo editado (null = novo)
+
+function renderEventosList() {
+  const eventos = getDayEventos(editingKey);
+  const container = document.getElementById('eventosList');
+  if (!container) return;
+  if (eventos.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = eventos.map((ev, i) => {
+    const t = TIPOS[ev.tipo];
+    const cor = getCor(ev.tipo);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid ${cor};border-radius:8px;padding:8px 10px;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">${getEmoji(ev.tipo)}</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${cor};">${t ? t.label : ev.tipo}</div>
+          ${ev.horario ? `<div style="font-size:11px;color:var(--muted);">⏰ ${ev.horario}${ev.termino?' - '+ev.termino:''}</div>` : ''}
+          ${ev.local ? `<div style="font-size:11px;color:var(--muted);">📍 ${ev.local}</div>` : ''}
+          ${ev.obs ? `<div style="font-size:11px;color:var(--muted);">${ev.obs}</div>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button onclick="editEvento(${i})" style="background:none;border:none;font-size:16px;cursor:pointer;">✏️</button>
+        <button onclick="deleteEvento(${i})" style="background:none;border:none;font-size:16px;cursor:pointer;">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getCor(tipo) {
+  const cores = { pm:'#4da6ff', dejem:'var(--dejem)', deleg:'var(--deleg)', folga_esp:'var(--folga)', ferias:'#4caf50', medico:'#e05555', trabalho:'#20c0e0', casa:'#e0a020', evento:'#c084fc', folga_normal:'#2d7a4a' };
+  return cores[tipo] || 'var(--muted)';
+}
+function getEmoji(tipo) {
+  const emojis = { pm:'🛡️', dejem:'🚑', deleg:'🚔', folga_esp:'🌴', ferias:'🏖️', medico:'🏥', trabalho:'💼', casa:'🏠', evento:'🎉', folga_normal:'😴' };
+  return emojis[tipo] || '📌';
+}
+
+function editEvento(idx) {
+  const eventos = getDayEventos(editingKey);
+  const ev = eventos[idx];
+  editingEventoIdx = idx;
+  selectedTipo = ev.tipo;
+  document.getElementById('obsField').value = ev.obs || '';
+  document.getElementById('horarioField').value = ev.horario || '';
+  document.getElementById('terminoField').value = ev.termino || '';
+  document.getElementById('localField').value = ev.local || '';
+  updateTipoBtns();
+  const extra = document.getElementById('extraFields');
+  if (selectedTipo && TIPOS_COM_EXTRA.includes(selectedTipo)) extra.classList.add('visible');
+  else extra.classList.remove('visible');
+}
+
+function deleteEvento(idx) {
+  const eventos = getDayEventos(editingKey);
+  eventos.splice(idx, 1);
+  if (eventos.length === 0) {
+    delete data[editingKey];
+  } else {
+    data[editingKey] = { eventos, auto: false };
+  }
+  saveData();
+  saveDayRemote(editingKey, data[editingKey] || null);
+  renderEventosList();
+  renderCalendar();
+  showToast('Removido ✓');
 }
 
 function closeModal() {
@@ -956,40 +1095,52 @@ function updateTipoBtns() {
 }
 
 function saveDay() {
+  if (!selectedTipo) { showToast('Selecione um tipo!'); return; }
+
   const obs     = document.getElementById('obsField').value.trim();
   const horario = document.getElementById('horarioField').value.trim();
   const termino = document.getElementById('terminoField').value.trim();
   const local   = document.getElementById('localField').value.trim();
+  const isExtra = TIPOS_COM_EXTRA.includes(selectedTipo);
 
-  const isExtra = selectedTipo && TIPOS_COM_EXTRA.includes(selectedTipo);
-  const extras  = isExtra ? {
-    ...(horario ? { horario } : {}),
-    ...(termino ? { termino } : {}),
-    ...(local   ? { local }   : {}),
-  } : {};
+  const novoEvento = {
+    tipo: selectedTipo,
+    ...(isExtra && horario ? { horario } : {}),
+    ...(isExtra && termino ? { termino } : {}),
+    ...(isExtra && local   ? { local }   : {}),
+    ...(obs ? { obs } : {}),
+  };
 
-  if (selectedTipo) {
-    data[editingKey] = { tipo: selectedTipo, ...extras, ...(obs ? { obs } : {}) };
-  } else if (obs) {
-    data[editingKey] = { tipo: null, obs };
+  const eventos = getDayEventos(editingKey).filter(ev => !ev.auto);
+  if (editingEventoIdx !== null) {
+    eventos[editingEventoIdx] = novoEvento; // editar existente
   } else {
-    delete data[editingKey];
+    eventos.push(novoEvento); // adicionar novo
   }
+
+  data[editingKey] = { eventos, auto: false };
   saveData();
-  // Salvar no Supabase
-  saveDayRemote(editingKey, data[editingKey] || null);
-  closeModal();
+  saveDayRemote(editingKey, data[editingKey]);
+
+  // Limpar campos para adicionar outro evento
+  selectedTipo = null;
+  editingEventoIdx = null;
+  document.getElementById('obsField').value = '';
+  document.getElementById('horarioField').value = '';
+  document.getElementById('terminoField').value = '';
+  document.getElementById('localField').value = '';
+  document.getElementById('extraFields').classList.remove('visible');
+  updateTipoBtns();
+  renderEventosList();
   renderCalendar();
-  showToast('Salvo ✓');
+  showToast('Adicionado ✓');
 }
 
 function clearDay() {
   const key = editingKey;
-  // Se era entrada manual (não auto do seed), deletar do Supabase
-  const wasManual = data[key] && !data[key].auto;
   delete data[key];
   saveData();
-  if (wasManual) saveDayRemote(key, null);
+  saveDayRemote(key, null);
   closeModal();
   renderCalendar();
   showToast('Dia limpo');
@@ -1129,6 +1280,67 @@ function iniciarApp() {
   syncFromRemote();
   startAutoSync();
 }
+
+// ====== FÉRIAS POR PERÍODO ======
+function openFeriasModal() {
+  // Pré-preencher com mês atual
+  const hoje = new Date();
+  const y = hoje.getFullYear(), m = String(hoje.getMonth()+1).padStart(2,'0'), d = String(hoje.getDate()).padStart(2,'0');
+  document.getElementById('feriasInicio').value = `${y}-${m}-${d}`;
+  document.getElementById('feriasFim').value = `${y}-${m}-${d}`;
+  document.getElementById('feriasSummary').textContent = '';
+  document.getElementById('overlayFerias').classList.add('open');
+  // Atualizar resumo ao mudar datas
+  ['feriasInicio','feriasFim'].forEach(id => {
+    document.getElementById(id).oninput = updateFeriasSummary;
+  });
+}
+
+function updateFeriasSummary() {
+  const ini = document.getElementById('feriasInicio').value;
+  const fim = document.getElementById('feriasFim').value;
+  if (!ini || !fim) return;
+  const d1 = new Date(ini + 'T12:00:00');
+  const d2 = new Date(fim + 'T12:00:00');
+  if (d2 < d1) { document.getElementById('feriasSummary').textContent = '⚠️ Data fim deve ser após início'; return; }
+  const dias = Math.round((d2-d1)/(1000*60*60*24)) + 1;
+  document.getElementById('feriasSummary').textContent = `${dias} dia${dias>1?'s':''} de férias`;
+}
+
+function closeFeriasModal() {
+  document.getElementById('overlayFerias').classList.remove('open');
+}
+
+async function salvarFerias() {
+  const ini = document.getElementById('feriasInicio').value;
+  const fim = document.getElementById('feriasFim').value;
+  if (!ini || !fim) { showToast('Preencha as datas!'); return; }
+  const d1 = new Date(ini + 'T12:00:00');
+  const d2 = new Date(fim + 'T12:00:00');
+  if (d2 < d1) { showToast('Data inválida!'); return; }
+
+  let count = 0;
+  const cur = new Date(d1);
+  const promises = [];
+  while (cur <= d2) {
+    const key = cur.toISOString().slice(0,10);
+    data[key] = { eventos: [{ tipo: 'ferias' }], auto: false };
+    promises.push(saveDayRemote(key, data[key]));
+    cur.setDate(cur.getDate() + 1);
+    count++;
+  }
+  saveData();
+  await Promise.all(promises);
+  closeFeriasModal();
+  closeModal();
+  renderCalendar();
+  showToast(`🏖️ ${count} dias de férias marcados!`);
+}
+
+// Fechar modal férias ao clicar fora
+document.getElementById('overlayFerias').addEventListener('click', e => {
+  if (e.target === document.getElementById('overlayFerias')) closeFeriasModal();
+});
 
 // Botão de trocar usuário
 function trocarUsuario() {
