@@ -1,21 +1,24 @@
-const CACHE_NAME = 'escala-pm-v4';
-const urlsToCache = ['./index.html', './manifest.json'];
+// SW v5 - Network first, sem cache agressivo
+const CACHE_NAME = 'escala-pm-v5';
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(urlsToCache)));
   self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-  ));
+  // Apagar todos os caches antigos
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.map(k => caches.delete(k)))
+    )
+  );
   self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
-  // Nunca cachear chamadas ao Supabase
+  // Nunca interceptar Supabase
   if (e.request.url.includes('supabase.co')) return;
+  // Sempre buscar da rede primeiro
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   );
